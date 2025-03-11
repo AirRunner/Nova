@@ -96,6 +96,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Add WebView
         let webView = WKWebView(frame: hoverView.bounds)
         webView.autoresizingMask = [.width, .height]
+        webView.underPageBackgroundColor = .clear
         hoverView.addSubview(webView)
         
         // Load Web Page
