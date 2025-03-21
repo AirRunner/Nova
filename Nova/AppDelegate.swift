@@ -7,14 +7,13 @@
 
 
 import Cocoa
-import WebKit
+@preconcurrency import WebKit
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var window: NSWindow?
-    var webView: WKWebView?
+    weak var webView: WKWebView?
     var reloadButton: NSButton?
-    var closeButton: NSButton?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory) // Remove Dock icon
@@ -96,7 +95,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Add WebView
         let webView = WKWebView(frame: hoverView.bounds)
         webView.autoresizingMask = [.width, .height]
-        webView.underPageBackgroundColor = .clear
+        webView.setValue(NSColor.clear, forKey: "underPageBackgroundColor")
+        webView.navigationDelegate = self
         hoverView.addSubview(webView)
         
         // Load Web Page
@@ -109,18 +109,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let padding: CGFloat = 10
 
         // Reload button
-        let reloadButton = HoverButton(image: NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "Reload")!, target: self, action: #selector(reloadWebView))
-        reloadButton.frame = NSRect(
-            x: windowSize.width / 2 - buttonSize / 2,
-            y: windowSize.height - buttonSize - padding,
-            width: buttonSize,
-            height: buttonSize
-        )
-        reloadButton.isBordered = false
-        reloadButton.wantsLayer = true
-        reloadButton.layer = CALayer()
-        reloadButton.alphaValue = 0
-        hoverView.addSubview(reloadButton)
+        // Declare reloadButton before the if let block
+        let reloadButton: HoverButton?
+        
+        if let reloadImage = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "Reload") {
+            let button = HoverButton(image: reloadImage, target: self, action: #selector(reloadWebView))
+            button.frame = NSRect(
+                x: windowSize.width / 2 - buttonSize / 2,
+                y: windowSize.height - buttonSize - padding,
+                width: buttonSize,
+                height: buttonSize
+            )
+            button.isBordered = false
+            button.wantsLayer = true
+            button.layer = CALayer()
+            button.alphaValue = 0
+            hoverView.addSubview(button)
+            reloadButton = button
+        } else {
+            reloadButton = nil
+        }
 
         // Make buttons appear/disappear on hover
         hoverView.onHover = { isHovering in
@@ -130,7 +138,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 let alpha: CGFloat = isHovering ? 1 : 0
 
                 // Use `animator()` to animate alpha change
-                reloadButton.animator().alphaValue = alpha
+                self.reloadButton?.animator().alphaValue = alpha
 
                 // Use explicit CABasicAnimation for the scale effect
                 let scaleAnimation = CABasicAnimation(keyPath: "transform.scale")
@@ -138,8 +146,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 scaleAnimation.duration = 0.2
                 scaleAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
 
-                reloadButton.layer?.add(scaleAnimation, forKey: "scale")
-                reloadButton.layer?.setAffineTransform(CGAffineTransform(scaleX: scale, y: scale))
+                self.reloadButton?.layer?.add(scaleAnimation, forKey: "scale")
+                self.reloadButton?.layer?.setAffineTransform(CGAffineTransform(scaleX: scale, y: scale))
             }
         }
 
@@ -164,6 +172,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func closeWindow() {
+        webView?.navigationDelegate = nil
         window?.orderOut(nil)
     }
 }
@@ -201,5 +210,17 @@ class HoverView: NSView {
 class HoverButton: NSButton {
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: .pointingHand)
+    }
+}
+
+extension AppDelegate: WKNavigationDelegate {
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if let url = navigationAction.request.url,
+           navigationAction.navigationType == .linkActivated {
+            NSWorkspace.shared.open(url) // Open in Safari
+            decisionHandler(.cancel) // Prevent loading in WebView
+        } else {
+            decisionHandler(.allow) // Allow normal navigation
+        }
     }
 }
