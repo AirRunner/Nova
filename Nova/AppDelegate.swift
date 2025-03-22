@@ -130,6 +130,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             reloadButton = nil
         }
 
+        let borderThickness: CGFloat = 15
+        
+        // Top draggable area
+        let topDragArea = NSView(frame: NSRect(x: 0, y: windowSize.height - borderThickness, width: windowSize.width, height: borderThickness))
+        topDragArea.wantsLayer = true
+        topDragArea.layer?.backgroundColor = NSColor.clear.cgColor
+        hoverView.addSubview(topDragArea)
+        
+        // Bottom draggable area
+        let bottomDragArea = NSView(frame: NSRect(x: 0, y: 0, width: windowSize.width, height: borderThickness))
+        bottomDragArea.wantsLayer = true
+        bottomDragArea.layer?.backgroundColor = NSColor.clear.cgColor
+        hoverView.addSubview(bottomDragArea)
+        
+        // Enable dragging in all areas
+        topDragArea.addGestureRecognizer(NSPanGestureRecognizer(target: self, action: #selector(handleDrag(_:))))
+        bottomDragArea.addGestureRecognizer(NSPanGestureRecognizer(target: self, action: #selector(handleDrag(_:))))
+
         // Make buttons appear/disappear on hover
         hoverView.onHover = { isHovering in
             NSAnimationContext.runAnimationGroup { context in
@@ -174,6 +192,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func closeWindow() {
         webView?.navigationDelegate = nil
         window?.orderOut(nil)
+    }
+
+    @objc func handleDrag(_ sender: NSPanGestureRecognizer) {
+        guard let window = window else { return }
+
+        if sender.state == .began {
+            let event = NSEvent.mouseEvent(
+                with: .leftMouseDown,
+                location: sender.location(in: window.contentView),
+                modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window.windowNumber,
+                context: nil,
+                eventNumber: 0,
+                clickCount: 1,
+                pressure: 1.0
+            )
+
+            if let event = event {
+                window.performDrag(with: event)
+            }
+        }
     }
 }
 
