@@ -9,6 +9,7 @@
 import Cocoa
 @preconcurrency import WebKit
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var window: NSWindow?
@@ -109,9 +110,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let padding: CGFloat = 10
 
         // Reload button
-        // Declare reloadButton before the if let block
-        let reloadButton: HoverButton?
-        
         if let reloadImage = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "Reload") {
             let button = HoverButton(image: reloadImage, target: self, action: #selector(reloadWebView))
             button.frame = NSRect(
@@ -125,9 +123,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.layer = CALayer()
             button.alphaValue = 0
             hoverView.addSubview(button)
-            reloadButton = button
+            self.reloadButton = button
         } else {
-            reloadButton = nil
+            self.reloadButton = nil
         }
 
         let borderThickness: CGFloat = 15
@@ -149,7 +147,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         bottomDragArea.addGestureRecognizer(NSPanGestureRecognizer(target: self, action: #selector(handleDrag(_:))))
 
         // Make buttons appear/disappear on hover
-        hoverView.onHover = { isHovering in
+        hoverView.onHover = { [weak self] isHovering in
+            guard let self = self else { return }
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.2
                 let scale: CGFloat = isHovering ? 1.2 : 1.0
@@ -171,7 +170,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         self.window = window
         self.webView = webView
-        self.reloadButton = reloadButton
     }
 
     // Toggle Window Visibility
