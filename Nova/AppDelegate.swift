@@ -101,7 +101,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         hoverView.addSubview(webView)
         
         // Load Web Page
-        if let url = URL(string: "http://localhost:8080/") {
+        if let url = URL(string: "http://localhost:3000/") {
             webView.load(URLRequest(url: url))
         }
         
