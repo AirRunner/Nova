@@ -257,8 +257,34 @@ extension AppDelegate: WKNavigationDelegate {
            navigationAction.navigationType == .linkActivated {
             NSWorkspace.shared.open(url) // Open in Safari
             decisionHandler(.cancel) // Prevent loading in WebView
+        } else if let url = navigationAction.request.url, url.absoluteString.starts(with: "data:attachment") {
+            handleDataURL(url)
+            decisionHandler(.cancel) // Stop navigation
         } else {
             decisionHandler(.allow) // Allow normal navigation
+        }
+    }
+    
+    private func handleDataURL(_ url: URL) {
+        // Extract encoded data
+        guard let base64String = url.absoluteString.components(separatedBy: "base64,").last,
+              let data = Data(base64Encoded: base64String) else {
+            print("Erreur : Can't decode data.")
+            return
+        }
+
+        // Use a UUID for the file name
+        let uniqueID = UUID().uuidString
+        let fileName = "file_\(uniqueID).csv"
+        
+        let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
+        let fileURL = downloadsURL.appendingPathComponent(fileName)
+
+        do {
+            try data.write(to: fileURL)
+            print("File saved at : \(fileURL)")
+        } catch {
+            print("Failed to save the file : \(error)")
         }
     }
 }
