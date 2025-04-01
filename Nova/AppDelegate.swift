@@ -65,7 +65,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let window = FloatingWindow(
             contentRect: NSRect(x: screenSize.width - windowSize.width - 30, y: 120, width: windowSize.width, height: windowSize.height),
-            styleMask: [.borderless, .resizable],
+            styleMask: [.borderless], // Add .resizable if needed
             backing: .buffered,
             defer: false
         )
