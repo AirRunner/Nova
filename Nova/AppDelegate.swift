@@ -57,14 +57,69 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func quitApp() {
         NSApp.terminate(nil)
     }
+    
+    struct Preferences: Codable {
+        var windowSize: NSSize
+        var windowOrigin: NSPoint
+        var webViewURL: String
+        var cornerRadius: CGFloat
+
+        static let defaults = Preferences(
+            windowSize: NSSize(width: 440, height: 540),
+            windowOrigin: NSPoint(x: 30, y: 120),
+            webViewURL: "http://localhost:3000/?temporary-chat=true",
+            cornerRadius: 30
+        )
+    }
+    
+    func preferencesFilePath() -> URL {
+        let fileManager = FileManager.default
+        let appSupportDir = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let novaDir = appSupportDir.appendingPathComponent("Nova", isDirectory: true)
+        let configFile = novaDir.appendingPathComponent("Preferences.plist")
+        
+        // Ensure the Nova directory exists
+        if !fileManager.fileExists(atPath: novaDir.path) {
+            try? fileManager.createDirectory(at: novaDir, withIntermediateDirectories: true, attributes: nil)
+        }
+
+        return configFile
+    }
+    
+    // Load preferences from a .plist file
+    func loadPreferences() -> Preferences {
+        let configFile = preferencesFilePath()
+
+        // If the preferences file exists, load and return it
+        if let data = try? Data(contentsOf: configFile),
+           let preferences = try? PropertyListDecoder().decode(Preferences.self, from: data) {
+            return preferences
+        }
+
+        // If the file is missing or corrupted, save default preferences
+        if let data = try? PropertyListEncoder().encode(Preferences.defaults) {
+            try? data.write(to: configFile)
+        }
+        return Preferences.defaults
+    }
 
     // Setup Floating Window
     func setupWindow() {
+        // Load preferences
+        let preferences = loadPreferences()
+        
+        let windowSize = preferences.windowSize
+        let windowOrigin = preferences.windowOrigin
+        let webViewURL = preferences.webViewURL
+        let cornerRadius = preferences.cornerRadius
+        
+        // Create window
         let screenSize = NSScreen.main?.frame ?? .zero
-        let windowSize = NSSize(width: 440, height: 540) // Default size
-
         let window = FloatingWindow(
-            contentRect: NSRect(x: screenSize.width - windowSize.width - 30, y: 120, width: windowSize.width, height: windowSize.height),
+            contentRect: NSRect(
+                x: screenSize.width - windowSize.width - windowOrigin.x, y: windowOrigin.y,
+                width: windowSize.width, height: windowSize.height
+            ),
             styleMask: [.borderless], // Add .resizable if needed
             backing: .buffered,
             defer: false
@@ -82,7 +137,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Rounded Corners
         hoverView.wantsLayer = true
-        hoverView.layer?.cornerRadius = 30
+        hoverView.layer?.cornerRadius = cornerRadius
         hoverView.layer?.masksToBounds = true
         
         // Blur Effect
@@ -101,7 +156,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         hoverView.addSubview(webView)
         
         // Load Web Page
-        if let url = URL(string: "http://localhost:3000/") {
+        if let url = URL(string: webViewURL) {
             webView.load(URLRequest(url: url))
         }
         
