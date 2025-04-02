@@ -86,7 +86,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         static let defaults = Preferences(
             windowSize: NSSize(width: 440, height: 540),
             windowOrigin: NSPoint(x: 30, y: 120),
-            webViewURL: "http://localhost:3000/?temporary-chat=true",
+            webViewURL: "http://localhost:8080/",
             cornerRadius: 30
         )
     }
