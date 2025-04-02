@@ -22,6 +22,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private let padding: CGFloat = 10
     private let borderThickness: CGFloat = 15
     
+    // Preferences window
+    private var preferencesWindowController: PreferencesController?
+    
     // MARK: - Application Lifecycle
     
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -56,6 +59,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func showMenu(_ sender: NSStatusBarButton) {
         let menu = NSMenu()
+        
+        // Add menu items
+        menu.addItem(NSMenuItem(title: "Preferences", action: #selector(showPreferencesWindow), keyEquivalent: ","))
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q"))
         
         // Use temporary menu assignment to show menu
@@ -129,7 +136,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Create window with correct positioning
         let window = createFloatingWindow(with: preferences)
-        let hoverView = createHoverView(in: window, with: preferences)
+        
+        // Create HoverView
+        let hoverView = HoverView(frame: NSRect(
+            x: 0, y: 0,
+            width: preferences.windowSize.width,
+            height: preferences.windowSize.height
+        ))
+        window.contentView = hoverView
         
         // Setup web view
         let webView = setupWebView(in: hoverView, with: preferences)
@@ -176,35 +190,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return window
     }
     
-    private func createHoverView(in window: NSWindow, with preferences: Preferences) -> HoverView {
-        let hoverView = HoverView(frame: NSRect(
-            x: 0, y: 0,
-            width: preferences.windowSize.width,
-            height: preferences.windowSize.height
-        ))
-        
-        window.contentView = hoverView
-        
-        // Apply rounded corners
-        hoverView.wantsLayer = true
-        hoverView.layer?.cornerRadius = preferences.cornerRadius
-        hoverView.layer?.masksToBounds = true
-        
-        // Add blur effect
-        let blurEffect = NSVisualEffectView(frame: hoverView.bounds)
-        blurEffect.material = .hudWindow
-        blurEffect.blendingMode = .behindWindow
-        blurEffect.state = .active
-        blurEffect.autoresizingMask = [.width, .height]
-        hoverView.addSubview(blurEffect)
-        
-        return hoverView
-    }
-    
     private func setupWebView(in hoverView: NSView, with preferences: Preferences) -> WKWebView {
         let webView = WKWebView(frame: hoverView.bounds)
         webView.autoresizingMask = [.width, .height]
-        webView.setValue(NSColor.clear, forKey: "underPageBackgroundColor")
+        
+        // Make WKWebView transparent and rounded
+        webView.setValue(false, forKey: "drawsBackground")
+        webView.wantsLayer = true
+        webView.layer?.cornerRadius = preferences.cornerRadius
+        webView.layer?.masksToBounds = true
+        
         webView.navigationDelegate = self
         hoverView.addSubview(webView)
         
@@ -342,6 +337,82 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             if let event = event {
                 window.performDrag(with: event)
             }
+        }
+    }
+
+    @objc private func showPreferencesWindow() {
+        // Create preferences window controller if it doesn't exist
+        if preferencesWindowController == nil {
+            let currentPreferences = loadPreferences()
+            preferencesWindowController = PreferencesController(
+                preferences: currentPreferences
+            ) { [weak self] updatedPreferences in
+                // Save the updated preferences
+                self?.savePreferences(updatedPreferences)
+                
+                // Apply changes immediately
+                self?.applyPreferencesChanges(updatedPreferences)
+            }
+        }
+        
+        // Show the preferences window
+        preferencesWindowController?.window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // Add this method to apply preferences changes
+    private func applyPreferencesChanges(_ preferences: Preferences) {
+        // Update window size and position
+        if let window = window {
+            // Get screen size to calculate position from right side
+            let screenSize = NSScreen.main?.frame ?? .zero
+            let newFrame = NSRect(
+                x: screenSize.width - preferences.windowSize.width - preferences.windowOrigin.x,
+                y: preferences.windowOrigin.y,
+                width: preferences.windowSize.width,
+                height: preferences.windowSize.height
+            )
+            
+            window.setFrame(newFrame, display: true, animate: true)
+            
+            // Update corner radius
+            if let webView = self.webView {
+                 NSAnimationContext.runAnimationGroup { context in
+                     context.duration = 0.2 // Short animation
+                     context.allowsImplicitAnimation = true
+                     webView.layer?.cornerRadius = preferences.cornerRadius
+                 } completionHandler: {
+                     window.invalidateShadow() // Force shadow recalculation
+                 }
+            }
+            
+            if let contentView = window.contentView as? HoverView {
+                // Resize subviews
+                for subview in contentView.subviews {
+                    if subview is NSVisualEffectView || subview is WKWebView {
+                        subview.frame = contentView.bounds
+                    }
+                    
+                    // Update reload button position
+                    if subview is HoverButton {
+                        subview.frame = NSRect(
+                            x: preferences.windowSize.width / 2 - buttonSize / 2,
+                            y: preferences.windowSize.height - buttonSize - padding,
+                            width: buttonSize,
+                            height: buttonSize
+                        )
+                    }
+                }
+                
+                // Recreate tracking areas
+                contentView.updateTrackingAreas()
+            }
+        }
+        
+        // Update WebView URL if needed
+        if let webView = webView, let currentURL = webView.url?.absoluteString,
+           currentURL != preferences.webViewURL, let url = URL(string: preferences.webViewURL) {
+            webView.load(URLRequest(url: url))
         }
     }
 }

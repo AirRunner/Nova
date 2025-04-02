@@ -1,16 +1,24 @@
+//
+//  PreferencesController.swift
+//  Nova
+//
+//  Created by Luca Vaio on 02/04/2025.
+//
+
+
 import Cocoa
 import WebKit
 
-class PreferencesWindowController: NSWindowController {
+class PreferencesController: NSWindowController {
     // MARK: - Outlets
-    @IBOutlet weak var widthField: NSTextField!
-    @IBOutlet weak var heightField: NSTextField!
-    @IBOutlet weak var xPositionField: NSTextField!
-    @IBOutlet weak var yPositionField: NSTextField!
-    @IBOutlet weak var urlField: NSTextField!
-    @IBOutlet weak var cornerRadiusSlider: NSSlider!
-    @IBOutlet weak var cornerRadiusLabel: NSTextField!
-    @IBOutlet weak var previewView: NSView!
+    private var widthField: NSTextField!
+    private var heightField: NSTextField!
+    private var xPositionField: NSTextField!
+    private var yPositionField: NSTextField!
+    private var urlField: NSTextField!
+    private var cornerRadiusSlider: NSSlider!
+    private var cornerRadiusLabel: NSTextField!
+    private var previewView: NSView!
     
     // MARK: - Properties
     private var preferences: AppDelegate.Preferences
@@ -51,14 +59,15 @@ class PreferencesWindowController: NSWindowController {
         window.contentView = contentView
         
         // Create UI elements
-        let stackView = NSStackView(frame: NSRect(x: 20, y: 20, width: 460, height: 360))
+        let stackView = NSStackView()
+        stackView.translatesAutoresizingMaskIntoConstraints = false
         stackView.orientation = .vertical
         stackView.alignment = .leading
         stackView.spacing = 16
         contentView.addSubview(stackView)
         
         // Window Size Section
-        let sizeLabel = NSTextField(labelWithString: "Window Size:")
+        let sizeLabel = NSTextField(labelWithString: "Window Size")
         sizeLabel.font = NSFont.boldSystemFont(ofSize: 14)
         
         let sizeStackView = NSStackView()
@@ -68,13 +77,13 @@ class PreferencesWindowController: NSWindowController {
         widthField = createTextField(value: Int(preferences.windowSize.width), width: 60)
         heightField = createTextField(value: Int(preferences.windowSize.height), width: 60)
         
-        sizeStackView.addArrangedSubview(NSTextField(labelWithString: "Width:"))
+        sizeStackView.addArrangedSubview(NSTextField(labelWithString: "Width :"))
         sizeStackView.addArrangedSubview(widthField)
-        sizeStackView.addArrangedSubview(NSTextField(labelWithString: "Height:"))
+        sizeStackView.addArrangedSubview(NSTextField(labelWithString: "Height :"))
         sizeStackView.addArrangedSubview(heightField)
         
         // Window Position Section
-        let positionLabel = NSTextField(labelWithString: "Window Position:")
+        let positionLabel = NSTextField(labelWithString: "Window Position")
         positionLabel.font = NSFont.boldSystemFont(ofSize: 14)
         
         let positionStackView = NSStackView()
@@ -84,18 +93,18 @@ class PreferencesWindowController: NSWindowController {
         xPositionField = createTextField(value: Int(preferences.windowOrigin.x), width: 60)
         yPositionField = createTextField(value: Int(preferences.windowOrigin.y), width: 60)
         
-        positionStackView.addArrangedSubview(NSTextField(labelWithString: "X:"))
+        positionStackView.addArrangedSubview(NSTextField(labelWithString: "X :"))
         positionStackView.addArrangedSubview(xPositionField)
-        positionStackView.addArrangedSubview(NSTextField(labelWithString: "Y:"))
+        positionStackView.addArrangedSubview(NSTextField(labelWithString: "Y :"))
         positionStackView.addArrangedSubview(yPositionField)
         
         // WebView URL Section
-        let urlLabel = NSTextField(labelWithString: "WebView URL:")
+        let urlLabel = NSTextField(labelWithString: "WebView URL")
         urlLabel.font = NSFont.boldSystemFont(ofSize: 14)
         
         urlField = NSTextField(frame: NSRect(x: 0, y: 0, width: 400, height: 24))
         urlField.stringValue = preferences.webViewURL
-        urlField.placeholderString = "Enter URL"
+        urlField.placeholderString = "http://localhost:8080"
         urlField.target = self
         urlField.action = #selector(updatePreview)
         
@@ -126,29 +135,26 @@ class PreferencesWindowController: NSWindowController {
         cornerRadiusStackView.addArrangedSubview(sliderStackView)
         
         // Preview Section
-        let previewLabel = NSTextField(labelWithString: "Preview:")
-        previewLabel.font = NSFont.boldSystemFont(ofSize: 14)
-        
-        previewView = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 120))
+        previewView = NSView(frame: NSRect(x: 100, y: 0, width: 200, height: 100))
         previewView.wantsLayer = true
-        previewView.layer?.backgroundColor = NSColor.lightGray.cgColor
+        previewView.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.5).cgColor
         previewView.layer?.cornerRadius = preferences.cornerRadius
         
         // Buttons
         let buttonStackView = NSStackView()
         buttonStackView.orientation = .horizontal
         buttonStackView.spacing = 8
-        buttonStackView.alignment = .trailing
         
         let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancelAction))
         cancelButton.bezelStyle = .rounded
         
-        let saveButton = NSButton(title: "Save", target: self, action: #selector(saveAction))
+        let saveButton = NSButton(title: "Apply", target: self, action: #selector(saveAction))
         saveButton.bezelStyle = .rounded
         saveButton.keyEquivalent = "\r" // Return key
         
-        buttonStackView.addArrangedSubview(cancelButton)
-        buttonStackView.addArrangedSubview(saveButton)
+        buttonStackView.addArrangedSubview(NSView())
+        buttonStackView.addView(cancelButton, in: .trailing)
+        buttonStackView.addView(saveButton, in: .trailing)
         
         // Add all sections to the main stack view
         stackView.addArrangedSubview(sizeLabel)
@@ -159,25 +165,40 @@ class PreferencesWindowController: NSWindowController {
         stackView.addArrangedSubview(urlField)
         stackView.addArrangedSubview(cornerRadiusLabel)
         stackView.addArrangedSubview(cornerRadiusStackView)
-        stackView.addArrangedSubview(previewLabel)
         stackView.addArrangedSubview(previewView)
         
-        // Add spacer to push buttons to the bottom
-        stackView.addArrangedSubview(NSView())
+        // Use hugging/compression resistance or constraints for flexible spacing
+        let spacer = NSView()
+        stackView.addArrangedSubview(spacer)
+        // Make the spacer flexible vertically
+        spacer.setContentHuggingPriority(.defaultLow, for: .vertical)
+        spacer.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+
         stackView.addArrangedSubview(buttonStackView)
         
-        // Set full width for certain views
-        urlField.widthAnchor.constraint(equalToConstant: 400).isActive = true
-        cornerRadiusSlider.widthAnchor.constraint(equalToConstant: 300).isActive = true
-        buttonStackView.widthAnchor.constraint(equalToConstant: 400).isActive = true
-        
-        // Auto layout
+        // Auto Layout Constraints
         stackView.translatesAutoresizingMaskIntoConstraints = false
+        urlField.translatesAutoresizingMaskIntoConstraints = false
+        cornerRadiusSlider.translatesAutoresizingMaskIntoConstraints = false
+        previewView.translatesAutoresizingMaskIntoConstraints = false
+        buttonStackView.translatesAutoresizingMaskIntoConstraints = false
+
         NSLayoutConstraint.activate([
+            // Main Stack View constraints
             stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
+            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20),
+
+            // Specific Widths/Heights
+            urlField.widthAnchor.constraint(equalTo: stackView.widthAnchor), // Make URL field fill width
+            cornerRadiusSlider.widthAnchor.constraint(greaterThanOrEqualToConstant: 250), // Min width for slider
+            previewView.heightAnchor.constraint(equalToConstant: 100),
+            previewView.widthAnchor.constraint(lessThanOrEqualToConstant: 200),
+            previewView.centerXAnchor.constraint(equalTo: stackView.centerXAnchor),
+            
+            // Ensure button stack view spans the width
+            buttonStackView.widthAnchor.constraint(equalTo: stackView.widthAnchor)
         ])
     }
     
@@ -187,6 +208,10 @@ class PreferencesWindowController: NSWindowController {
         textField.formatter = NumberFormatter()
         textField.target = self
         textField.action = #selector(updatePreview)
+        
+        // Set width constraint for the text field itself
+        textField.widthAnchor.constraint(equalToConstant: width).isActive = true
+        
         return textField
     }
     
@@ -201,6 +226,7 @@ class PreferencesWindowController: NSWindowController {
     @objc private func updatePreview() {
         // Update preview based on current settings
         previewView.layer?.cornerRadius = CGFloat(cornerRadiusSlider.doubleValue)
+        previewView.needsDisplay = true
     }
     
     @objc private func cancelAction() {
@@ -235,8 +261,5 @@ class PreferencesWindowController: NSWindowController {
         
         // Call the save handler
         onSave?(updatedPreferences)
-        
-        // Close the window
-        window?.close()
     }
 }
