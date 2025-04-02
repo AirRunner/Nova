@@ -30,6 +30,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory) // Remove Dock icon
         
+        setupMainMenuAction()
         setupMenuBar()
         setupWindow()
         
@@ -37,6 +38,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     // MARK: - Menu Bar Setup
+    
+    private func setupMainMenuAction() {
+        // Find the default Preferences item in the main menu
+        if let mainMenu = NSApplication.shared.mainMenu,
+           let appMenu = mainMenu.items.first?.submenu,
+           let prefsMenuItem = appMenu.items.first(where: { $0.keyEquivalent == "," }) {
+            prefsMenuItem.target = self
+            prefsMenuItem.action = #selector(showPreferencesWindow)
+        } else {
+            print("Warning: Could not find default Preferences menu item.")
+        }
+    }
     
     private func setupMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
