@@ -23,8 +23,8 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
     private var cancelButton: NSButton!
 
     // MARK: - Properties
-    private var currentPreferences: AppDelegate.Preferences // Store the initial/current state
-    private var onSave: ((AppDelegate.Preferences) -> Void)? // Closure to call on save
+    private var currentPreferences: PreferencesManager.Preferences // Store the initial/current state
+    private var onSave: ((PreferencesManager.Preferences) -> Void)? // Closure to call on save
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.lucavaio.Nova", category: "PreferencesController")
 
     // Number Formatter for numeric fields
@@ -39,7 +39,7 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
 
     // MARK: - Initialization
 
-    init(preferences: AppDelegate.Preferences, onSave: @escaping (AppDelegate.Preferences) -> Void) {
+    init(preferences: PreferencesManager.Preferences, onSave: @escaping (PreferencesManager.Preferences) -> Void) {
         self.currentPreferences = preferences
         self.onSave = onSave
 
@@ -288,7 +288,7 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
         }
 
         // Construct updated preferences struct
-        let updatedPreferences = AppDelegate.Preferences(
+        let updatedPreferences = PreferencesManager.Preferences(
             windowSize: NSSize(width: widthValue, height: heightValue),
             windowOrigin: NSPoint(x: xValue, y: yValue),
             webViewURL: urlField.stringValue, // Use the validated string
