@@ -22,6 +22,7 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
     private var saveButton: NSButton!
     private var cancelButton: NSButton!
 
+    
     // MARK: - Properties
     private var currentPreferences: PreferencesManager.Preferences // Store the initial/current state
     private var onSave: ((PreferencesManager.Preferences) -> Void)? // Closure to call on save
@@ -43,15 +44,14 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
         self.currentPreferences = preferences
         self.onSave = onSave
 
-        // Create the window programmatically
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 420), // Adjusted size slightly
-            styleMask: [.titled, .closable], // Standard preferences window style
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 420),
+            styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
         window.title = "Nova Preferences"
-        window.center() // Center on screen initially
+        window.center()
         // Prevent resizing
         window.styleMask.remove(.resizable)
 
@@ -59,18 +59,15 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
 
         // Set the window delegate to self to handle closure
         window.delegate = self
-
-        // Set up the UI elements within the window's content view
         setupUI()
-        // Load initial values into the UI fields
         loadInitialValues()
-        // Initial preview update
         updatePreview()
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+
 
     // MARK: - UI Setup
 
@@ -80,12 +77,11 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
             return
         }
 
-        // Main vertical stack view covering the content area
         let mainStackView = NSStackView()
         mainStackView.orientation = .vertical
         mainStackView.alignment = .leading // Align content to the leading edge
         mainStackView.spacing = 18 // Consistent spacing between sections
-        mainStackView.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20) // Padding
+        mainStackView.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
         mainStackView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(mainStackView)
 
@@ -147,7 +143,6 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
         radiusStackView.addArrangedSubview(cornerRadiusSlider)
         radiusStackView.addArrangedSubview(cornerRadiusValueLabel)
 
-
         // --- Preview Section ---
         previewView = NSView()
         previewView.wantsLayer = true
@@ -156,15 +151,12 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
         previewView.layer?.borderWidth = 1.0
         previewView.translatesAutoresizingMaskIntoConstraints = false // Essential for constraints
 
-
         // --- Buttons Section ---
         let buttonStackView = NSStackView()
         buttonStackView.orientation = .horizontal
         buttonStackView.spacing = 8
-        // Add flexible space to push buttons right
         let spacer = NSView()
-        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
-
+        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal) // Flexible space to push buttons right
 
         cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancelAction))
         cancelButton.bezelStyle = .rounded
@@ -173,12 +165,12 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
         saveButton.bezelStyle = .rounded
         saveButton.keyEquivalent = "\r" // Enter/Return key triggers Apply
 
-        buttonStackView.addArrangedSubview(spacer) // Push buttons to the right
+        buttonStackView.addArrangedSubview(spacer)
         buttonStackView.addArrangedSubview(cancelButton)
         buttonStackView.addArrangedSubview(saveButton)
         buttonStackView.translatesAutoresizingMaskIntoConstraints = false // For width constraint
 
-        // --- Add all sections to the main stack view ---
+        // --- Add sections to main stack ---
         mainStackView.addArrangedSubview(sizeSectionLabel)
         mainStackView.addArrangedSubview(sizeStackView)
         mainStackView.setCustomSpacing(10, after: sizeStackView)
@@ -197,27 +189,25 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
 
         mainStackView.addArrangedSubview(previewView)
 
-        // Flexible spacer before buttons
         let verticalSpacer = NSView()
         verticalSpacer.setContentHuggingPriority(.defaultLow, for: .vertical)
         mainStackView.addArrangedSubview(verticalSpacer)
 
         mainStackView.addArrangedSubview(buttonStackView)
 
-
         // --- Auto Layout Constraints ---
         NSLayoutConstraint.activate([
-            // Main Stack View constraints (pin to edges with padding defined in edgeInsets)
+            // Main Stack View constraints
             mainStackView.topAnchor.constraint(equalTo: contentView.topAnchor),
             mainStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             mainStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             mainStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
 
-            // Width constraints for specific elements
+            // Width constraints
             urlField.widthAnchor.constraint(equalTo: mainStackView.widthAnchor, constant: -mainStackView.edgeInsets.left - mainStackView.edgeInsets.right), // Fill width minus padding
             cornerRadiusSlider.widthAnchor.constraint(greaterThanOrEqualToConstant: 200),
             cornerRadiusValueLabel.widthAnchor.constraint(equalToConstant: 50), // Fixed width for label consistency
-            buttonStackView.widthAnchor.constraint(equalTo: mainStackView.widthAnchor, constant: -mainStackView.edgeInsets.left - mainStackView.edgeInsets.right), // Fill width
+            buttonStackView.widthAnchor.constraint(equalTo: mainStackView.widthAnchor, constant: -mainStackView.edgeInsets.left - mainStackView.edgeInsets.right),
 
             // Preview View constraints
             previewView.heightAnchor.constraint(equalToConstant: 100),
@@ -225,22 +215,19 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
             previewView.centerXAnchor.constraint(equalTo: mainStackView.centerXAnchor), // Center preview horizontally
             previewView.leadingAnchor.constraint(greaterThanOrEqualTo: mainStackView.leadingAnchor, constant: mainStackView.edgeInsets.left),
             previewView.trailingAnchor.constraint(lessThanOrEqualTo: mainStackView.trailingAnchor, constant: -mainStackView.edgeInsets.right)
-
         ])
     }
 
     // Helper to create consistently styled text fields
     private func createTextField(width: CGFloat) -> NSTextField {
         let textField = NSTextField()
-        textField.formatter = numberFormatter // Apply number formatter
+        textField.formatter = numberFormatter
         textField.target = self // Trigger updatePreview on change
         textField.translatesAutoresizingMaskIntoConstraints = false
-        // Set width constraint
         textField.widthAnchor.constraint(equalToConstant: width).isActive = true
         return textField
     }
 
-    // Load initial preference values into UI fields
     private func loadInitialValues() {
         widthField.stringValue = "\(Int(currentPreferences.windowSize.width))"
         heightField.stringValue = "\(Int(currentPreferences.windowSize.height))"
@@ -251,6 +238,7 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
         cornerRadiusValueLabel.stringValue = "\(Int(currentPreferences.cornerRadius)) px"
     }
 
+
     // MARK: - Actions
 
     @objc private func cornerRadiusChanged(_ sender: NSSlider) {
@@ -260,12 +248,9 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
     }
 
     @objc private func updatePreview() {
-        // Update preview based on current slider/field values
         let radius = CGFloat(cornerRadiusSlider.doubleValue)
         previewView.layer?.cornerRadius = radius
-
-        // Ensure layer changes are rendered
-        previewView.needsDisplay = true
+        previewView.needsDisplay = true // Ensure layer changes are rendered
     }
 
     @objc private func cancelAction() {
@@ -287,11 +272,10 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
             return
         }
 
-        // Construct updated preferences struct
         let updatedPreferences = PreferencesManager.Preferences(
             windowSize: NSSize(width: widthValue, height: heightValue),
             windowOrigin: NSPoint(x: xValue, y: yValue),
-            webViewURL: urlField.stringValue, // Use the validated string
+            webViewURL: urlField.stringValue,
             cornerRadius: CGFloat(cornerRadiusSlider.doubleValue)
         )
 
@@ -308,7 +292,6 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
         alert.alertStyle = .warning
         alert.addButton(withTitle: "OK")
 
-        // Safely get window for modal sheet
         guard let window = self.window else {
             logger.error("Cannot show validation alert: Window not found.")
             return

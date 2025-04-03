@@ -22,38 +22,32 @@ class HoverView: NSView {
 
     private var trackingArea: NSTrackingArea?
 
-    // Recalculate view's tracking areas
+    // Recalculate view's tracking areas when bounds change
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
 
-        // Remove the old tracking area if it exists
         if let existingArea = self.trackingArea {
             removeTrackingArea(existingArea)
-            self.trackingArea = nil
         }
 
-        // Create a new tracking area covering the entire bounds of the view
         let newTrackingArea = NSTrackingArea(
-            rect: self.bounds, // Track the whole view area
+            rect: self.bounds,
             options: [.mouseEnteredAndExited, .activeAlways],
             owner: self,
             userInfo: nil
         )
-
         addTrackingArea(newTrackingArea)
-        self.trackingArea = newTrackingArea // Store the new area
+        self.trackingArea = newTrackingArea
     }
 
-    // Mouse cursor enters the view's tracking area
     override func mouseEntered(with event: NSEvent) {
         super.mouseEntered(with: event)
-        onHover?(true) // Hover started
+        onHover?(true)
     }
 
-    // Mouse cursor exits the view's tracking area
     override func mouseExited(with event: NSEvent) {
         super.mouseExited(with: event)
-        onHover?(false) // Hover ended
+        onHover?(false)
     }
 }
 

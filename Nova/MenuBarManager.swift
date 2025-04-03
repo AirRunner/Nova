@@ -9,7 +9,7 @@
 import AppKit
 import os.log
 
-// Protocol to communicate actions back to the AppDelegate (or coordinator)
+// Protocol to communicate actions back to the AppDelegate
 @MainActor
 protocol MenuBarManagerDelegate: AnyObject {
     func menuBarManagerDidRequestToggleWindow()
@@ -37,9 +37,19 @@ class MenuBarManager {
     // --- Setup ---
     private func setupMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        // Strong menu bar failure handling, as it is a floating app
         guard let button = statusItem?.button else {
             logger.critical("Failed to create status bar button.")
-            // Consider how to handle this fatal error - maybe alert the user?
+            
+            let alert = NSAlert()
+            alert.messageText = "Menu Bar Error"
+            alert.informativeText = "Failed to create the application's menu bar button. The application needs to quit."
+            alert.alertStyle = .critical
+            alert.addButton(withTitle: "Quit")
+            alert.runModal()
+            
+            logger.error("Terminating application due to menu bar failure.")
+            NSApplication.shared.terminate(self)
             return
         }
 
@@ -77,7 +87,7 @@ class MenuBarManager {
         // Display the menu
         statusItem?.menu = menu
         statusItem?.button?.performClick(nil) // Programmatically click to show
-        statusItem?.menu = nil // Important: Reset menu so left-click works again
+        statusItem?.menu = nil // Reset menu so left-click works again
     }
 
     @objc private func preferencesAction() {

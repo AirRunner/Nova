@@ -55,20 +55,20 @@ class WindowManager: NSObject, WKNavigationDelegate {
     }
     
     func showWindow() {
-         guard let window = window else { return }
-         guard !isWindowVisible else { return } // Don't do anything if already visible
+        guard let window = window else { return }
+        guard !isWindowVisible else { return }
 
-         // Reposition before showing, in case screen setup changed
-         repositionWindow(window, preferences: preferencesManager.currentPreferences)
+        // Reposition before showing, in case screen setup changed
+        repositionWindow(window, preferences: preferencesManager.currentPreferences)
 
-         window.makeKeyAndOrderFront(nil)
-         NSApp.activate(ignoringOtherApps: true) // Bring the app (and its window) to the front
-         logger.debug("Window shown.")
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true) // Bring the app to the front
+        logger.debug("Window shown.")
     }
 
     func hideWindow() {
         guard let window = window else { return }
-        guard isWindowVisible else { return } // Don't do anything if already hidden
+        guard isWindowVisible else { return }
 
         window.orderOut(nil)
         logger.debug("Window hidden.")
@@ -103,7 +103,7 @@ class WindowManager: NSObject, WKNavigationDelegate {
         let screenFrame = mainScreen.visibleFrame
         let newFrame = NSRect(
             x: screenFrame.maxX - preferences.windowSize.width - preferences.windowOrigin.x,
-            y: screenFrame.minY + preferences.windowOrigin.y, // Y is from bottom
+            y: screenFrame.minY + preferences.windowOrigin.y,
             width: preferences.windowSize.width,
             height: preferences.windowSize.height
         )
@@ -116,9 +116,9 @@ class WindowManager: NSObject, WKNavigationDelegate {
         // Update corner radius with animation
         if let webViewLayer = self.webView?.layer {
              NSAnimationContext.runAnimationGroup { context in
-                 context.duration = 0.2
-                 context.allowsImplicitAnimation = true // Allow layer properties like cornerRadius to animate
-                 webViewLayer.cornerRadius = preferences.cornerRadius
+                context.duration = 0.2
+                context.allowsImplicitAnimation = true // Allow layer properties like cornerRadius to animate
+                webViewLayer.cornerRadius = preferences.cornerRadius
              } completionHandler: {
                  window.invalidateShadow() // Update shadow after animation
              }
@@ -170,8 +170,7 @@ class WindowManager: NSObject, WKNavigationDelegate {
         self.window = window
         self.webView = webView
 
-        // Optionally show immediately, or let AppDelegate decide when
-         self.showWindow() // Show window after setup
+        self.showWindow() // Show window after setup
     }
 
      private func createFloatingWindow(with preferences: PreferencesManager.Preferences) -> FloatingWindow {
@@ -180,7 +179,7 @@ class WindowManager: NSObject, WKNavigationDelegate {
 
         guard let mainScreen = NSScreen.main else {
             logger.error("Could not get main screen information. Using zero origin.")
-            // Return a default positioned window? Or handle more gracefully.
+            // Return a default positioned window
             return FloatingWindow(contentRect: NSRect(origin: .zero, size: windowSize), styleMask: [.borderless], backing: .buffered, defer: false)
         }
         let screenFrame = mainScreen.visibleFrame
@@ -200,7 +199,6 @@ class WindowManager: NSObject, WKNavigationDelegate {
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         window.hasShadow = true
-        // window.delegate = self // If window delegate methods are needed (e.g., windowWillClose)
 
         return window
      }
@@ -278,29 +276,28 @@ class WindowManager: NSObject, WKNavigationDelegate {
              guard let buttonLayer = reloadButton.layer else { return }
 
              NSAnimationContext.runAnimationGroup { context in
-                 context.duration = 0.2
-                 context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                 context.allowsImplicitAnimation = true
+                context.duration = 0.2
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                context.allowsImplicitAnimation = true
 
-                 let targetAlpha: CGFloat = isHovering ? 1.0 : 0.0
-                 let targetScale: CGFloat = isHovering ? 1.2 : 1.0
+                let targetAlpha: CGFloat = isHovering ? 1.0 : 0.0
+                let targetScale: CGFloat = isHovering ? 1.2 : 1.0
 
-                 reloadButton.animator().alphaValue = targetAlpha
+                reloadButton.animator().alphaValue = targetAlpha
 
-                 let scaleAnimation = CABasicAnimation(keyPath: "transform.scale")
-                 scaleAnimation.toValue = targetScale
-                 scaleAnimation.duration = context.duration
-                 scaleAnimation.timingFunction = context.timingFunction
+                let scaleAnimation = CABasicAnimation(keyPath: "transform.scale")
+                scaleAnimation.toValue = targetScale
+                scaleAnimation.duration = context.duration
+                scaleAnimation.timingFunction = context.timingFunction
 
-                 buttonLayer.add(scaleAnimation, forKey: "transform.scale")
-                 buttonLayer.setAffineTransform(CGAffineTransform(scaleX: targetScale, y: targetScale))
+                buttonLayer.add(scaleAnimation, forKey: "transform.scale")
+                buttonLayer.setAffineTransform(CGAffineTransform(scaleX: targetScale, y: targetScale))
              }
          }
      }
 
     // --- Actions ---
 
-    // Renamed action to avoid conflict with public func
     @objc private func reloadWebViewAction() {
         reloadWebView()
     }
@@ -341,10 +338,9 @@ class WindowManager: NSObject, WKNavigationDelegate {
     }
 
     private func createHTML(message: String) -> String {
-        // Copied from original AppDelegate
         return """
                <html><body style='font-family: -apple-system, sans-serif; color: #888; background-color: #EEE;
-               display: flex; justify-content: center; align-items: center; height: 100vh; text-align: center;'>
+               display: flex; justify-content: center; align-items: center; height: 100%; text-align: center;'>
                \(message)
                </body></html>
                """
@@ -378,7 +374,6 @@ class WindowManager: NSObject, WKNavigationDelegate {
     }
 
     private func handleDataURLDownload(_ url: URL) {
-        // Copied from original AppDelegate
         let urlString = url.absoluteString
         guard urlString.starts(with: "data:"), let rangeOfBase64 = urlString.range(of: ";base64,") else {
             logger.error("Could not parse data URL for download: \(urlString.prefix(100))")

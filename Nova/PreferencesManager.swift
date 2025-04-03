@@ -7,22 +7,22 @@
 
 
 import Foundation
-import AppKit // For NSSize, NSPoint, CGFloat
+import AppKit
 import os.log
 
-@MainActor // Ensure access to preferences happens on the main thread if needed by UI
+@MainActor // Ensure access happens on the main thread
 class PreferencesManager {
 
     // Define the Preferences structure within the manager
     struct Preferences: Codable {
         var windowSize: NSSize
-        var windowOrigin: NSPoint // Stored as offset from bottom-right of *visible* screen area
+        var windowOrigin: NSPoint
         var webViewURL: String
         var cornerRadius: CGFloat
 
         static let defaults = Preferences(
             windowSize: NSSize(width: 440, height: 540),
-            windowOrigin: NSPoint(x: 30, y: 30), // Offset from screen bottom-right corner
+            windowOrigin: NSPoint(x: 30, y: 30),
             webViewURL: "http://localhost:8080/",
             cornerRadius: 30
         )
@@ -96,10 +96,10 @@ class PreferencesManager {
     // --- Private Helpers ---
     private func loadPreferencesFromFile() -> Preferences {
         guard FileManager.default.fileExists(atPath: preferencesFileURL.path(percentEncoded: false)) else {
-             logger.info("No preferences file found at \(self.preferencesFileURL.path). Using and saving defaults.")
-             // Save defaults if file doesn't exist
-             savePreferences(Preferences.defaults)
-             return Preferences.defaults
+            logger.info("No preferences file found at \(self.preferencesFileURL.path). Using and saving defaults.")
+            // Save defaults if file doesn't exist
+            savePreferences(Preferences.defaults)
+            return Preferences.defaults
          }
 
         do {
@@ -110,7 +110,6 @@ class PreferencesManager {
             return loadedPreferences
         } catch {
             logger.error("Failed to decode preferences: \(error.localizedDescription). Using defaults.")
-            // Consider backing up the corrupted file here before overwriting with defaults
             savePreferences(Preferences.defaults) // Overwrite potentially corrupted file with defaults
             return Preferences.defaults
         }
@@ -127,9 +126,7 @@ class PreferencesManager {
         if !fileManager.fileExists(atPath: novaDir.path(percentEncoded: false)) {
             do {
                 try fileManager.createDirectory(at: novaDir, withIntermediateDirectories: true, attributes: nil)
-                // Log creation, maybe handle error slightly differently
             } catch {
-                // Log error, fatalError might be too harsh if defaults can still work in memory
                 print("Failed to create preferences directory: \(error.localizedDescription)")
             }
         }
