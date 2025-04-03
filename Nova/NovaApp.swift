@@ -7,16 +7,17 @@
 
 
 import SwiftUI
-import AppKit
 
 @main
 struct NovaApp: App {
+    // Use the AppDelegate for lifecycle and core functionality management
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
+
     var body: some Scene {
+        // Prevent SwiftUI from creating a default settings window content
         Settings {
-            // Empty settings scene to avoid blank window
             EmptyView()
+                .frame(width: 0, height: 0) // Ensure it takes no space if shown
         }
     }
 }

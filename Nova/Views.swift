@@ -8,41 +8,59 @@
 
 import Cocoa
 
+// Custom NSWindow subclass to allow borderless windows to become key window (receive events)
 class FloatingWindow: NSWindow {
     override var canBecomeKey: Bool {
         return true
     }
 }
 
+// Custom NSView subclass that detects mouse hover events
 class HoverView: NSView {
-    var onHover: ((Bool) -> Void)?
-    
+    // Closure property to notify when the hover state changes
+    var onHover: ((_ isHovering: Bool) -> Void)?
+
+    private var trackingArea: NSTrackingArea?
+
+    // Recalculate view's tracking areas
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
-        
-        // Remove existing tracking areas before adding a new one
-        trackingAreas.forEach(removeTrackingArea)
-        
-        let trackingArea = NSTrackingArea(
-            rect: bounds,
-            options: [.activeAlways, .mouseEnteredAndExited],
+
+        // Remove the old tracking area if it exists
+        if let existingArea = self.trackingArea {
+            removeTrackingArea(existingArea)
+            self.trackingArea = nil
+        }
+
+        // Create a new tracking area covering the entire bounds of the view
+        let newTrackingArea = NSTrackingArea(
+            rect: self.bounds, // Track the whole view area
+            options: [.mouseEnteredAndExited, .activeAlways],
             owner: self,
             userInfo: nil
         )
-        addTrackingArea(trackingArea)
+
+        addTrackingArea(newTrackingArea)
+        self.trackingArea = newTrackingArea // Store the new area
     }
-    
+
+    // Mouse cursor enters the view's tracking area
     override func mouseEntered(with event: NSEvent) {
-        onHover?(true)
+        super.mouseEntered(with: event)
+        onHover?(true) // Hover started
     }
-    
+
+    // Mouse cursor exits the view's tracking area
     override func mouseExited(with event: NSEvent) {
-        onHover?(false)
+        super.mouseExited(with: event)
+        onHover?(false) // Hover ended
     }
 }
 
+// Custom NSButton subclass that shows a pointing hand cursor on hover
 class HoverButton: NSButton {
     override func resetCursorRects() {
-        addCursorRect(bounds, cursor: .pointingHand)
+        super.resetCursorRects()
+        addCursorRect(self.bounds, cursor: .pointingHand)
     }
 }
