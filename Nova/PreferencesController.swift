@@ -45,7 +45,7 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
         self.onSave = onSave
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 420),
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 440),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -80,7 +80,7 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
         let mainStackView = NSStackView()
         mainStackView.orientation = .vertical
         mainStackView.alignment = .leading // Align content to the leading edge
-        mainStackView.spacing = 18 // Consistent spacing between sections
+        mainStackView.spacing = 10 // Consistent spacing between sections
         mainStackView.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
         mainStackView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(mainStackView)
@@ -173,15 +173,15 @@ class PreferencesController: NSWindowController, NSWindowDelegate {
         // --- Add sections to main stack ---
         mainStackView.addArrangedSubview(sizeSectionLabel)
         mainStackView.addArrangedSubview(sizeStackView)
-        mainStackView.setCustomSpacing(10, after: sizeStackView)
+        mainStackView.setCustomSpacing(20, after: sizeStackView)
 
         mainStackView.addArrangedSubview(positionSectionLabel)
         mainStackView.addArrangedSubview(positionStackView)
-        mainStackView.setCustomSpacing(10, after: positionStackView)
+        mainStackView.setCustomSpacing(20, after: positionStackView)
 
         mainStackView.addArrangedSubview(urlSectionLabel)
         mainStackView.addArrangedSubview(urlField)
-        mainStackView.setCustomSpacing(10, after: urlField)
+        mainStackView.setCustomSpacing(20, after: urlField)
 
         mainStackView.addArrangedSubview(cornerRadiusSectionLabel)
         mainStackView.addArrangedSubview(radiusStackView)
