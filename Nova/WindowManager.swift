@@ -126,17 +126,6 @@ class WindowManager: NSObject, WKNavigationDelegate {
              logger.warning("Could not access webView layer to update corner radius.")
         }
 
-        // Update frames of draggable areas to match new window size
-        self.topDragArea?.frame = NSRect(x: 0, y: preferences.windowSize.height - borderThickness, width: preferences.windowSize.width, height: borderThickness)
-        self.bottomDragArea?.frame = NSRect(x: 0, y: 0, width: preferences.windowSize.width, height: borderThickness)
-
-        // Reposition reload button
-        self.reloadButton?.frame = NSRect(
-            x: (preferences.windowSize.width - buttonSize) / 2,
-            y: preferences.windowSize.height - buttonSize - padding,
-            width: buttonSize, height: buttonSize
-        )
-
         // Ensure HoverView tracking area is updated
         self.hoverView?.updateTrackingAreas()
 
@@ -236,7 +225,7 @@ class WindowManager: NSObject, WKNavigationDelegate {
                 y: windowSize.height - buttonSize - padding,
                 width: buttonSize, height: buttonSize
             )
-            button.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin]
+            button.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin, .maxYMargin]
             button.isBordered = false
             button.wantsLayer = true
             button.alphaValue = 0
@@ -252,13 +241,13 @@ class WindowManager: NSObject, WKNavigationDelegate {
     private func setupDragAreas(in hoverView: HoverView, size windowSize: NSSize) {
         let topDragRect = NSRect(x: 0, y: windowSize.height - borderThickness, width: windowSize.width, height: borderThickness)
         let topArea = NSView(frame: topDragRect)
-        topArea.autoresizingMask = [.width, .minYMargin]
+        topArea.autoresizingMask = [.width, .minYMargin, .maxYMargin]
         hoverView.addSubview(topArea, positioned: .above, relativeTo: webView)
         self.topDragArea = topArea
 
         let bottomDragRect = NSRect(x: 0, y: 0, width: windowSize.width, height: borderThickness)
         let bottomArea = NSView(frame: bottomDragRect)
-        bottomArea.autoresizingMask = [.width, .maxYMargin]
+        bottomArea.autoresizingMask = [.width]
         hoverView.addSubview(bottomArea, positioned: .above, relativeTo: webView)
         self.bottomDragArea = bottomArea
 
@@ -340,7 +329,7 @@ class WindowManager: NSObject, WKNavigationDelegate {
     private func createHTML(message: String) -> String {
         return """
                <html><body style='font-family: -apple-system, sans-serif; color: #888; background-color: #EEE;
-               display: flex; justify-content: center; align-items: center; height: 100%; text-align: center;'>
+               display: flex; justify-content: center; align-items: center; margin: 0; height: 100vh; text-align: center;'>
                \(message)
                </body></html>
                """
