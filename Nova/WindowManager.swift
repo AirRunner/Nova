@@ -368,15 +368,25 @@ class WindowManager: NSObject, WKNavigationDelegate {
             logger.error("Could not parse data URL for download: \(urlString.prefix(100))")
             return
         }
+        
+        // Extract MIME type from data URL
+        let mimeTypeSection = String(urlString[urlString.index(urlString.startIndex, offsetBy: 5)..<rangeOfBase64.lowerBound])
+        let mimeType = mimeTypeSection.isEmpty ? "text/plain" : mimeTypeSection
+        
         let base64String = String(urlString[rangeOfBase64.upperBound...])
         guard let data = Data(base64Encoded: base64String) else {
             logger.error("Failed to decode Base64 data.")
             return
         }
+        
+        // Detect file type and extension
+        let fileExtension = detectFileType(from: mimeType, data: data)
+        
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyyMMddHHmmss"
         let timestamp = dateFormatter.string(from: Date())
-        let fileName = "file_\(timestamp).csv" // Assume file is a CSV table
+        let fileName = "file_\(timestamp).\(fileExtension)"
+        
         guard let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else {
             logger.error("Could not access Downloads directory.")
             return
@@ -384,10 +394,162 @@ class WindowManager: NSObject, WKNavigationDelegate {
         let fileURL = downloadsURL.appendingPathComponent(fileName)
         do {
             try data.write(to: fileURL, options: .atomic)
-            logger.info("File saved successfully to: \(fileURL.path)")
+            logger.info("File saved successfully to: \(fileURL.path) with detected type: \(fileExtension)")
         } catch {
             logger.error("Failed to save downloaded file: \(error.localizedDescription)")
         }
+    }
+    
+    private func detectFileType(from mimeType: String, data: Data) -> String {
+        // First, try to determine type from MIME type
+        let normalizedMimeType = mimeType.lowercased()
+        
+        switch normalizedMimeType {
+        case let mime where mime.contains("pdf"):
+            return "pdf"
+        case let mime where mime.contains("xml"):
+            return "xml"
+        case let mime where mime.contains("html"):
+            return "html"
+        case let mime where mime.contains("json"):
+            return "json"
+        case let mime where mime.contains("csv"):
+            return "csv"
+        case "application/pdf":
+            return "pdf"
+        case "text/xml", "application/xml":
+            return "xml"
+        case "text/html", "application/xhtml+xml":
+            return "html"
+        case "application/json", "text/json":
+            return "json"
+        case "text/csv", "application/csv":
+            return "csv"
+        default:
+            break
+        }
+        
+        // Check for PDF first (binary format)
+        if data.count >= 4 {
+            let pdfHeader = data.prefix(4)
+            if let headerString = String(data: pdfHeader, encoding: .ascii), headerString == "%PDF" {
+                return "pdf"
+            }
+        }
+        
+        // If MIME type doesn't give us a clear answer, analyze the content
+        guard let content = String(data: data, encoding: .utf8) else {
+            // If we can't decode as UTF-8, check if it might be a binary PDF
+            if data.count >= 8 {
+                let headerBytes = data.prefix(8)
+                if headerBytes.starts(with: [0x25, 0x50, 0x44, 0x46]) { // %PDF in bytes
+                    return "pdf"
+                }
+            }
+            logger.warning("Could not decode data as UTF-8 text. Defaulting to txt.")
+            return "txt"
+        }
+        
+        let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Check for XML (including HTML as a subset)
+        if trimmedContent.hasPrefix("<?xml") || 
+           trimmedContent.contains("<?xml") ||
+           (trimmedContent.hasPrefix("<") && trimmedContent.hasSuffix(">") && trimmedContent.contains("</")) {
+            
+            // Distinguish between HTML and XML
+            let lowercaseContent = trimmedContent.lowercased()
+            if lowercaseContent.contains("<!doctype html") ||
+               lowercaseContent.contains("<html") ||
+               lowercaseContent.contains("<head>") ||
+               lowercaseContent.contains("<body>") {
+                return "html"
+            } else {
+                return "xml"
+            }
+        }
+        
+        // Check for JSON
+        if (trimmedContent.hasPrefix("{") && trimmedContent.hasSuffix("}")) ||
+           (trimmedContent.hasPrefix("[") && trimmedContent.hasSuffix("]")) {
+            // Try to validate it's actually JSON by attempting to parse
+            do {
+                _ = try JSONSerialization.jsonObject(with: data, options: [])
+                return "json"
+            } catch {
+                // Not valid JSON, continue checking
+            }
+        }
+        
+        // Improved CSV detection
+        let lines = content.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        
+        if !lines.isEmpty {
+            let firstLine = lines[0]
+            
+            // Check for quoted CSV fields (more flexible pattern that handles HTML entities and mixed content)
+            let quotedFieldPattern = #"\"[^\"]*\""#
+            let quotedFieldRegex = try? NSRegularExpression(pattern: quotedFieldPattern)
+            let quotedMatches = quotedFieldRegex?.numberOfMatches(in: firstLine, range: NSRange(firstLine.startIndex..., in: firstLine)) ?? 0
+            
+            // Count separators
+            let commaCount = firstLine.components(separatedBy: ",").count - 1
+            let semicolonCount = firstLine.components(separatedBy: ";").count - 1
+            let tabCount = firstLine.components(separatedBy: "\t").count - 1
+            
+            // Enhanced CSV detection logic
+            let hasMultipleColumns = commaCount > 0 || semicolonCount > 0 || tabCount > 0
+            let hasQuotedFields = quotedMatches > 0
+            
+            // Additional CSV indicators
+            let startsWithQuote = firstLine.hasPrefix("\"")
+            let containsCommaAfterQuote = firstLine.contains("\",")
+            let containsHTMLEntities = firstLine.contains("&quot;") || firstLine.contains("&amp;") || firstLine.contains("&lt;") || firstLine.contains("&gt;")
+            
+            // Strong CSV indicators
+            let isLikelyCSV = hasQuotedFields || 
+                             (startsWithQuote && containsCommaAfterQuote) ||
+                             (hasMultipleColumns && (quotedMatches > 0 || containsHTMLEntities))
+            
+            if isLikelyCSV {
+                // Determine the most likely separator
+                let separator = commaCount >= semicolonCount && commaCount >= tabCount ? "," :
+                               semicolonCount >= tabCount ? ";" : "\t"
+                let separatorCount = separator == "," ? commaCount : 
+                                   separator == ";" ? semicolonCount : tabCount
+                
+                // For single line with strong CSV indicators
+                if lines.count == 1 && (hasQuotedFields || separatorCount >= 1) {
+                    return "csv"
+                }
+                
+                // For multiple lines, use more lenient consistency checking
+                if lines.count > 1 {
+                    var consistentLineCount = 0
+                    
+                    // Check first few lines for CSV patterns
+                    for line in lines.prefix(5) {
+                        let lineCommaCount = line.components(separatedBy: separator).count - 1
+                        let lineQuotedMatches = quotedFieldRegex?.numberOfMatches(in: line, range: NSRange(line.startIndex..., in: line)) ?? 0
+                        
+                        // A line is consistent if it has similar separator count OR has quoted fields
+                        if abs(lineCommaCount - separatorCount) <= 2 || lineQuotedMatches > 0 || line.contains("&quot;") {
+                            consistentLineCount += 1
+                        }
+                    }
+                    
+                    // If most lines look CSV-like, classify as CSV
+                    let totalLinesToCheck = min(5, lines.count)
+                    if consistentLineCount >= max(1, totalLinesToCheck / 2) {
+                        return "csv"
+                    }
+                }
+            }
+        }
+        
+        // Default to txt if no specific type detected
+        logger.info("Could not detect specific file type from MIME type '\(mimeType)' or content analysis. Using txt.")
+        return "txt"
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
