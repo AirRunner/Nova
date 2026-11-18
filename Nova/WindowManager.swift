@@ -198,6 +198,7 @@ class WindowManager: NSObject, WKNavigationDelegate {
         webView.underPageBackgroundColor = .clear
         webView.wantsLayer = true
         webView.layer?.cornerRadius = preferences.cornerRadius
+        webView.layer?.cornerCurve = .continuous
         webView.layer?.masksToBounds = true
         webView.navigationDelegate = self // Manager handles delegate calls
         hoverView.addSubview(webView) // Add behind controls
